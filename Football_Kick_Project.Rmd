@@ -35,36 +35,33 @@ data_mvt <- read_excel("EMG_MOVEMENT.xlsx") |>
 
 ## Raw EMG signals
 ```{r}
-gg_mvc_bf <- ggplot(data_mvc_bf, aes(time, signal)) +
+gg_mvc_bf_raw <- ggplot(data_mvc_bf, aes(time, signal)) +
   geom_line(color = "blue") +
   labs(x = "Time", 
        y = "Amplitude (mV)", 
-       title = "EMG MVC Biceps Femoris") +
+       title = "EMG MVC Biceps Femoris Raw") +
   theme_light()
 
-gg_mvc_rf <- ggplot(data_mvc_rf, aes(time, signal)) +
+gg_mvc_rf_raw <- ggplot(data_mvc_rf, aes(time, signal)) +
   geom_line(color = "blue") +
   labs(x = "Time", 
        y = "Amplitude (mV)", 
-       title = "EMG MVC Rectus Femoris") +
+       title = "EMG MVC Rectus Femoris Raw") +
   theme_light()
 
-gg_mvt_bf <- ggplot(data_mvt, aes(time, signal_bf)) +
+gg_mvt_bf_raw <- ggplot(data_mvt, aes(time, signal_bf)) +
   geom_line(color = "blue") +
   labs(x = "Time", 
        y = "Amplitude (mV)", 
-       title = "EMG Movement Biceps Femoris") +
+       title = "EMG Movement Biceps Femoris Raw") +
   theme_light()
 
-gg_mvt_rf <- ggplot(data_mvt, aes(time, signal_rf)) +
+gg_mvt_rf_raw <- ggplot(data_mvt, aes(time, signal_rf)) +
   geom_line(color = "blue") +
   labs(x = "Time", 
        y = "Amplitude (mV)", 
-       title = "EMG Movement Rectus Femoris") +
+       title = "EMG Movement Rectus Femoris Raw") +
   theme_light()
-
-gg_mvc_bf / gg_mvc_rf
-gg_mvt_bf / gg_mvt_bf
 
 ```
 
@@ -75,7 +72,7 @@ lowcut <- 20
 highcut <- 450
 order <- 4
 
-# Design a butterworth filter
+# Design a Butterworth filter
 bf <- butter(order, c(lowcut, highcut)/(fs/2), type= "pass", plane ="z")
 
 # Apply the filter to the data
@@ -88,17 +85,38 @@ data_mvt <- data_mvt |> mutate(signal_bf_filtered = filtfilt(bf, signal_bf),
 
 ## Plot filtered signals
 ```{r}
-plot(timeMVCBF,filteredMVCBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG MVC Biceps Femoris filtered")
+gg_mvc_bf_filt <- ggplot(data_mvc_bf, aes(time, signal_filtered)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Amplitude (mV)", 
+       title = "EMG MVC Biceps Femoris Filtered") +
+  theme_light()
 
-plot(timeMVCRF,filteredMVCRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG MVC Rectus Femoris filtered")
+gg_mvc_rf_filt <- ggplot(data_mvc_rf, aes(time, signal_filtered)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Amplitude (mV)", 
+       title = "EMG MVC Rectus Femoris Filtered") +
+  theme_light()
 
-plot(timeMOVEMENT,filteredMoveBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG Movement Biceps Femoris filtered")
+gg_mvt_bf_filt <- ggplot(data_mvt, aes(time, signal_bf_filtered)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Amplitude (mV)", 
+       title = "EMG Movement Biceps Femoris Filtered") +
+  theme_light()
 
-plot(timeMOVEMENT,filteredMoveRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG Movement Rectus Femoris filtered")
+gg_mvt_rf_filt <- ggplot(data_mvt, aes(time, signal_rf_filtered)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Amplitude (mV)", 
+       title = "EMG Movement Rectus Femoris Filtered") +
+  theme_light()
+
+gg_mvc_bf_raw / gg_mvc_rf_raw
+gg_mvt_bf_raw / gg_mvt_bf_raw
+gg_mvc_bf_filt / gg_mvc_rf_filt
+gg_mvt_bf_filt / gg_mvt_bf_filt
 ```
 
 # 3. Amplitude analysis ( Análisis de la amplitud) 
