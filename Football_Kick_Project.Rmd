@@ -119,115 +119,80 @@ gg_mvc_bf_filt / gg_mvc_rf_filt
 gg_mvt_bf_filt / gg_mvt_bf_filt
 ```
 
-# 3. Amplitude analysis ( Análisis de la amplitud) 
+## Amplitude analysis
+### Calculate RMS envelope
+```{r}
+# Compute the power of the signal
+data_mvc_bf <- data_mvc_bf |> mutate(signal_power = signal_filtered^2)
+data_mvc_rf <- data_mvc_rf |> mutate(signal_power = signal_filtered^2)
+data_mvt <- data_mvt |> mutate(signal_bf_power = signal_bf_filtered^2,
+                               signal_rf_power = signal_rf_filtered^2
+                              )
+
+# Apply a moving window average to smooth the signal
 
 
-# 3.2 Envelope (Curva envolvente)
+rms_env <- function(power) {
+  window_size <- 0.1
+  window_size_samples <- window_size*fs
+  sqrt(stats::filter(power, rep(1 / window_size_samples, window_size_samples), method = "conv"))
+}
 
-#Rectify
+data_mvc_bf <- data_mvc_bf |> mutate(signal_rms_env = rms_env(signal_power)) |> na.omit()
+data_mvc_rf <- data_mvc_rf |> mutate(signal_rms_env = rms_env(signal_power)) |> na.omit()
+data_mvt <- data_mvt |> mutate(signal_bf_rms_env = rms_env(signal_bf_power),
+                               signal_rf_rms_env = rms_env(signal_rf_power)) |>
+  na.omit()
 
-rectifiedMVCBF <- abs(filteredMVCBF)
-rectifiedMVCRF <- abs(filteredMVCRF)
-rectifiedMOVEBF <- abs(filteredMoveBF)
-rectifiedMOVERF <- abs(filteredMoveRF)
-
-
-plot(timeMVCBF,rectifiedMVCBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG MVC Biceps Femoris rectified")
-
-plot(timeMVCRF,rectifiedMVCRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG MVC Rectus Femoris rectified")
-
-plot(timeMOVEMENT,rectifiedMOVEBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG Movement Biceps Femoris rectified")
-
-plot(timeMOVEMENT,rectifiedMOVERF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG Movement Rectus Femoris rectified")
-
-# Compute the power of the signal( Cálculo de la potencia de la señal, suavizado)
-
-data_powerMVCBF <- filteredMVCBF^2
-data_powerMVCRF <- filteredMVCRF^2
-data_powerMoveBF <- filteredMoveBF^2
-data_powerMoveRF <- filteredMoveRF^2
-
-# Apply a moving window average to smooth the signal ( Aplicar una media de ventana móvil para suavizar la señal  )
-
-window_size <- 0.1
-window_size_samples <- window_size*fs
-data_power_smoothedMVCBF <- stats::filter(data_powerMVCBF,rep(1/window_size_samples, window_size_samples), method = "conv")
-data_power_smoothedMVCRF <- stats::filter(data_powerMVCRF,rep(1/window_size_samples, window_size_samples), method = "conv")
-data_power_smoothedMoveBF <- stats::filter(data_powerMoveBF,rep(1/window_size_samples, window_size_samples), method = "conv")
-data_power_smoothedMoveRF <- stats::filter(data_powerMoveRF,rep(1/window_size_samples, window_size_samples), method = "conv")
+data_mvc_bf <- data_mvc_bf |> mutate(time = time - min(time))
+data_mvc_rf <- data_mvc_rf |> mutate(time = time - min(time))
+data_mvt <- data_mvt |> mutate(time = time - min(time))
+```
 
 
+## Normalization and plot normalized RMSE signals
+```{r}
+# Normalize the signal by dividing by the MVC value
+mvc_bf <- max(data_mvc_bf$signal_rms_env)
+mvc_rf <- max(data_mvc_rf$signal_rms_env)
 
-# Compute the square root of the averaged signal to obtain the RMS envelope ( Calcula la raíz cuadrada de la señal promediada para obtener la envolvente RMS )
+data_mvc_bf <- data_mvc_bf |> mutate(signal_normalized = signal_rms_env / mvc_bf)
+data_mvc_rf <- data_mvc_rf |> mutate(signal_normalized = signal_rms_env / mvc_rf)
+data_mvt <- data_mvt |> mutate(bf_normalized = signal_bf_rms_env / mvc_bf,
+                               rf_normalized = signal_rf_rms_env / mvc_rf
+                               )
+```
 
-data_rms_envMVCBF <- sqrt(data_power_smoothedMVCBF)
-data_rms_envMVCRF <- sqrt(data_power_smoothedMVCRF)
-data_rms_envMOVEBF <- sqrt(data_power_smoothedMoveBF)
-data_rms_envMOVERF <- sqrt(data_power_smoothedMoveRF)
+## Plot the normalized RMS envelope
+```{r}
+gg_mvc_bf_rms <- ggplot(data_mvc_bf, aes(time, signal_normalized)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Amplitude (mV)", 
+       title = "EMG MVC Biceps Femoris Normalized RMS Envelope") +
+  theme_light()
 
-#crear un vector con na
+gg_mvc_rf_rms <- ggplot(data_mvc_rf, aes(time, signal_normalized)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Amplitude (mV)", 
+       title = "EMG MVC Rectus Femoris Normalized RMS Envelope") +
+  theme_light()
 
-non_naMVCBF <- !is.na(data_rms_envMVCBF)
-non_naMVCRF <- !is.na(data_rms_envMVCRF)
-non_naMoveBF <- !is.na(data_rms_envMOVEBF)
-non_naMoveRF <- !is.na(data_rms_envMOVERF)
+gg_mvt_bf_rms <- ggplot(data_mvt, aes(time, bf_normalized)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Amplitude (mV)", 
+       title = "EMG Movement Biceps Femoris Normalized RMS Envelope") +
+  theme_light()
 
-#subgrupo con el vector logico
+gg_mvt_rf_rms <- ggplot(data_mvt, aes(time, rf_normalized)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Amplitude (mV)", 
+       title = "EMG Movement Rectus Femoris Normalized RMS Envelope") +
+  theme_light()
 
-data_rms_envMVCBF <- data_rms_envMVCBF[non_naMVCBF]
-data_rms_envMVCRF <- data_rms_envMVCRF[non_naMVCRF]
-data_rms_envMOVEBF <- data_rms_envMOVEBF[non_naMoveBF]
-data_rms_envMOVERF <- data_rms_envMOVERF[non_naMoveRF]
-
-# Plot the results ( Gráfica de resuktados) 
-
-time_rmsMVCBF <- 1:length(data_rms_envMVCBF)/fs   # time definition (deficion del tiempo) 
-time_rmsMVCRF <- 1:length(data_rms_envMVCRF)/fs
-time_rmsMOVE <- 1:length(data_rms_envMOVEBF)/fs
-
-plot(time_rmsMVCBF,data_rms_envMVCBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG MVC Biceps Femoris Smoothed")
-
-plot(time_rmsMVCRF,data_rms_envMVCRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG MVC Rectus Femoris Smoothed")
-
-plot(time_rmsMOVE,data_rms_envMOVEBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG Movement Biceps Femoris Smoothed")
-
-plot(time_rmsMOVE,data_rms_envMOVERF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG Movement Rectus Femoris Smoothed")
-
-
-# 3.1 Normalization (Normalización)
-
-# Normalize the signal by dividing by the maximum value (Normalizar la señal dividiéndola por el valor máximo)
-
-max_MVCBF <- max(data_rms_envMVCBF)
-max_MVCRF <- max(data_rms_envMVCRF)
-max_MoveRF <- max(data_rms_envMOVERF)
-
-normalized_dataMoveBF <- data_rms_envMOVEBF/max_MVCBF
-normalized_dataMoveRF <- data_rms_envMOVERF/max_MoveRF
-
-
-# Plot the original and normalized signals (# graficado  las señales filtrada  y normalizada )
-
-
-par(mfrow=c(2,1))
-
-plot(time_rmsMOVE,data_rms_envMOVEBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG Movement Biceps Femoris Smoothed")
-
-plot(time_rmsMOVE,normalized_dataMoveBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG Movement Biceps Femoris Normalizada")
-
-plot(time_rmsMOVE,data_rms_envMOVERF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG Movement Rectus Femoris Smoothed")
-
-plot(time_rmsMOVE,normalized_dataMoveRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG Movement Rectus Femoris Normalizada")
+gg_mvc_bf_rms / gg_mvc_rf_rms
+gg_mvt_bf_rms / gg_mvt_rf_rms
 ```
