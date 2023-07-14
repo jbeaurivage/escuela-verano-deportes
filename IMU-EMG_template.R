@@ -8,6 +8,12 @@
 #(zoo), (pracma), (signal), (tidyverse), (seewave),(gsignal), (readxl)
 #...
 
+library(zoo)
+library(pracma)
+library(signal)
+library(tidyverse)
+library(gsignal)
+library(readxl)
 
 #########################################
 ### CODE FOR IMUS ( Codigo para 2 IMU`s`) 
@@ -334,144 +340,241 @@ filt_yaw <- filtfilt(b, yaw_relative)
 
 ### CODE FOR EMG ( codigo EMG)
 
-# EMG DATA SIGNAL PROCESSING FROM 2 MUSCLES (# PROCESAMIENTO DE SEÑAL DE DATOS EMG DE 2 MÚSCULOS  )
+# Set up a 2x1 plotting area
 
-# Set up a 2x1 plotting area ( configuracion de area de graficado)
-#...
+par(mfrow=c(3,1))
 
+# 1. Read data
 
-# 1. Read data ( lectura de datos)
-
-# Load EMG data into a data frame (Carga de datos EMG a un marco de datos)
-#...
-
-data <-  
-dataMVC_RF <- 
-dataMVC_BF <- 
-
-# Name the columns ( nombrado de columnas)
-#time, EMG_RF, EMG_BF
-#...
-  
-names(data) <- 
-
-#time, EMG_MVC_RF
-#...
-names(dataMVC_RF) <- 
-
-#time, EMG_MVC_RF  
-#...  
-names(dataMVC_BF) <-
+# Load EMG data into a data frame (Cargar datos EMG en una estructura de datos)
 
 
-# Convert to numeric vector ( convertir a vector numerico)
+data_EMGMVCBF <- read_excel("R_BFMVC.xlsx")  
+data_EMGMVCRF <- read_excel("R_RFMVC.xlsx") 
+data_MOVEMENT <- read_excel("EMG_MOVEMENT.xlsx")
 
-# EMG data exercise ( EMG movimiento )
-emg_dataRF <- as.numeric(data$EMG_RF)
-timeRF <- as.numeric(data$time)
+# Convert to numeric vector (Conversión de datos a una vectores numericos)
 
-emg_dataBF <- as.numeric(data$EMG_BF)
-timeBF <- as.numeric(data$time)
+emg_MVCBF<- as.numeric(data_EMGMVCBF$`R BICEPS FEMORIS: EMG 2 [V]`)
+timeMVCBF <- as.numeric(data_EMGMVCBF$`X [s]`)
 
-# EMG data MVC ( MCV EMG RF)
-MVC_RF <- as.numeric(dataMVC_RF$EMG_MVC_RF)
-MCV_timeRF <- as.numeric(dataMVC_RF$time)
+emg_MVCRF<- as.numeric(data_EMGMVCRF$`R RECTUS FEMORIS: EMG 1 [V]`)
+timeMVCRF <- as.numeric(data_EMGMVCRF$`X [s]`)
 
-MVC_BF <- as.numeric(dataMVC_BF$EMG_MVC_RF)
-MCV_timeBF <- as.numeric(dataMVC_BF$time)
-
-
-
-# 2. Filter EMG data ( Filtrado de datos)
-
-# Set filter parameters( parametros del filtro )
-#...
-fs <- 
-lowcut <-  
-highcut <- 
-order <-
-
-# Design a butterworth filter ( filtro Butterworth)
-#...
-bf <- 
-
-# Apply the filter to the data 
-filtered_RF <- #emg_dataRF
-filtered_BF <- #emg_dataBF
-filtered_RF_MVC <- #MVC_RF
-filtered_BF_MVC <- #MVC_BF
+emg_MOVEMENTBF<- as.numeric(data_MOVEMENT$`R BICEPS FEMORIS: EMG 2 [V]`)
+emg_MOVEMENTRF<- as.numeric(data_MOVEMENT$`R RECTUS FEMORIS: EMG 1 [V]`)
+timeMOVEMENT <- as.numeric(data_MOVEMENT$`X [s]`)
 
 
+# Plot raw (Gráfico señal bruta )
 
-# 4. Amplitude analysis ( analisis de la amplitud) 
+plot(timeMVCBF,emg_MVCBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG MVC Biceps Femoris")
 
-# 4.1 Envelope ( envolvente )
+plot(timeMVCRF,emg_MVCRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG MVC Rectus Femoris")
 
+plot(timeMOVEMENT,emg_MOVEMENTBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG Movement Biceps Femoris")
 
+plot(timeMOVEMENT,emg_MOVEMENTRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG Movement Rectus Femoris")
 
-# Compute the power of the signal (# Calcular la potencia de la señal )
-#...
-RF_power <- #filtered_RF squared
-BF_power <- #filtered_BF squared
-MVC_RF_power <- #filtered_RF_MVC squared
-MVC_BF_power <- #filtered_BF_MVC squared
+# 2. Filter EMG data (Filtrado datos EMG )
 
-# Apply a moving window average to smooth the signal( Aplicar una media de ventana móvil para suavizar la señal )
-window_size <- 0.1 # window size in seconds
-window_size_samples <- window_size * fs # window size in samples
-RF_power_smoothed <- stats::filter(RF_power, rep(1/window_size_samples, window_size_samples), method = "conv")
-BF_power_smoothed <- stats::filter(BF_power, rep(1/window_size_samples, window_size_samples), method = "conv")
-MVC_RF_power_smoothed <- stats::filter(MVC_RF_power, rep(1/window_size_samples, window_size_samples), method = "conv")
-MVC_BF_power_smoothed <- stats::filter(MVC_BF_power, rep(1/window_size_samples, window_size_samples), method = "conv")
+# Set filter parameters (Definición de los parametros del filtro)
 
-# Compute the square root of the averaged signal to obtain the RMS envelope(# Calcular la raíz cuadrada de la señal promediada para obtener la envolvente RMS.  )
-RF_rms_env <- #RF_power_smoothed
-BF_rms_env <- #BF_power_smoothed
-MVC_RF_rms_env <- #MVC_RF_power_smoothed
-MVC_BF_rms_env <- #MVC_BF_power_smoothed
+fs <- 2160
+lowcut <- 20
+highcut <- 450
+order <- 4
 
 
-# Plot the results ( graficas de resultados)
-MVC_tRF <- 1:length(MVC_RF)/fs
-MVC_tBF <- 1:length(MVC_BF)/fs
-MVC_tRF_rms <- 1:length(MVC_RF_rms_env)/fs
-MVC_tBF_rms <- 1:length(MVC_BF_rms_env)/fs
+# Design a butterworth filter ( Diseño del filtro butterworth)
 
-#...
-#timeRF , RF_rms_env
-
-#timeBF , BF_rms_env
-
-#MVC_tRF_rms , MVC_RF_rms_env
-
-#MVC_tRF_rms , MVC_RF_rms_env
-
-#MVC_tBF_rms , MVC_BF_rms_env
+bf <- butter(order, c(lowcut, highcut)/(fs/2), type= "pass", plane ="z")
 
 
-# 4.2 Normalization ( Normalizacion)
+# Apply the filter to the data (Implementación de flitro a los datos) 
 
-# Obtain the maximum value of MVC recordings(# Obtener el valor máximo de las MVC )
-# remove NA if applicable
-#...
+filteredMVCBF <- filtfilt(bf, emg_MVCBF)
+filteredMVCRF <- filtfilt(bf, emg_MVCRF)
+filteredMoveBF <- filtfilt(bf, emg_MOVEMENTBF)
+filteredMoveRF <- filtfilt(bf, emg_MOVEMENTRF)
 
-max_valueRF <- 
-max_valueBF <- 
+# Signal plot  ( Graficado de la señal )
 
-# Normalize the signal by dividing by the maximum value (Normalizar la señal dividiéndola por el valor máximo )
-#...
-normalized_dataRF <- 
-normalized_dataBF <- 
+plot(timeMVCBF,filteredMVCBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG MVC Biceps Femoris filtered")
 
-# Plot the original and normalized signals ( Graficado de señales normalizadas)
-#...
-# timeRF , normalized_dataRF
+plot(timeMVCRF,filteredMVCRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG MVC Rectus Femoris filtered")
 
-# timeBF ,normalized_dataBF
+plot(timeMOVEMENT,filteredMoveBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG Movement Biceps Femoris filtered")
+
+plot(timeMOVEMENT,filteredMoveRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG Movement Rectus Femoris filtered")
+
+# 3. Amplitude analysis ( Análisis de la amplitud) 
+
+
+# 3.2 Envelope (Curva envolvente)
+
+#Rectify
+
+rectifiedMVCBF <- abs(filteredMVCBF)
+rectifiedMVCRF <- abs(filteredMVCRF)
+rectifiedMOVEBF <- abs(filteredMoveBF)
+rectifiedMOVERF <- abs(filteredMoveRF)
+
+
+plot(timeMVCBF,rectifiedMVCBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG MVC Biceps Femoris rectified")
+
+plot(timeMVCRF,rectifiedMVCRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG MVC Rectus Femoris rectified")
+
+plot(timeMOVEMENT,rectifiedMOVEBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG Movement Biceps Femoris rectified")
+
+plot(timeMOVEMENT,rectifiedMOVERF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG Movement Rectus Femoris rectified")
+
+# Compute the power of the signal( Cálculo de la potencia de la señal, suavizado)
+
+data_powerMVCBF <- filteredMVCBF^2
+data_powerMVCRF <- filteredMVCRF^2
+data_powerMoveBF <- filteredMoveBF^2
+data_powerMoveRF <- filteredMoveRF^2
+
+# Apply a moving window average to smooth the signal ( Aplicar una media de ventana móvil para suavizar la señal  )
+
+window_size <- 0.1
+window_size_samples <- window_size*fs
+data_power_smoothedMVCBF <- stats::filter(data_powerMVCBF,rep(1/window_size_samples, window_size_samples), method = "conv")
+data_power_smoothedMVCRF <- stats::filter(data_powerMVCRF,rep(1/window_size_samples, window_size_samples), method = "conv")
+data_power_smoothedMoveBF <- stats::filter(data_powerMoveBF,rep(1/window_size_samples, window_size_samples), method = "conv")
+data_power_smoothedMoveRF <- stats::filter(data_powerMoveRF,rep(1/window_size_samples, window_size_samples), method = "conv")
 
 
 
+# Compute the square root of the averaged signal to obtain the RMS envelope ( Calcula la raíz cuadrada de la señal promediada para obtener la envolvente RMS )
 
+data_rms_envMVCBF <- sqrt(data_power_smoothedMVCBF)
+data_rms_envMVCRF <- sqrt(data_power_smoothedMVCRF)
+data_rms_envMOVEBF <- sqrt(data_power_smoothedMoveBF)
+data_rms_envMOVERF <- sqrt(data_power_smoothedMoveRF)
+
+#crear un vector con na
+
+non_naMVCBF <- !is.na(data_rms_envMVCBF)
+non_naMVCRF <- !is.na(data_rms_envMVCRF)
+non_naMoveBF <- !is.na(data_rms_envMOVEBF)
+non_naMoveRF <- !is.na(data_rms_envMOVERF)
+
+#subgrupo con el vector logico
+
+data_rms_envMVCBF <- data_rms_envMVCBF[non_naMVCBF]
+data_rms_envMVCRF <- data_rms_envMVCRF[non_naMVCRF]
+data_rms_envMOVEBF <- data_rms_envMOVEBF[non_naMoveBF]
+data_rms_envMOVERF <- data_rms_envMOVERF[non_naMoveRF]
+
+# Plot the results ( Gráfica de resuktados) 
+
+time_rmsMVCBF <- 1:length(data_rms_envMVCBF)/fs   # time definition (deficion del tiempo) 
+time_rmsMVCRF <- 1:length(data_rms_envMVCRF)/fs
+time_rmsMOVE <- 1:length(data_rms_envMOVEBF)/fs
+
+plot(time_rmsMVCBF,data_rms_envMVCBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG MVC Biceps Femoris Smoothed")
+
+plot(time_rmsMVCRF,data_rms_envMVCRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG MVC Rectus Femoris Smoothed")
+
+plot(time_rmsMOVE,data_rms_envMOVEBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG Movement Biceps Femoris Smoothed")
+
+plot(time_rmsMOVE,data_rms_envMOVERF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG Movement Rectus Femoris Smoothed")
+
+
+# 3.1 Normalization (Normalización)
+
+# Normalize the signal by dividing by the maximum value (Normalizar la señal dividiéndola por el valor máximo)
+
+max_MVCBF <- max(data_rms_envMVCBF)
+max_MVCRF <- max(data_rms_envMVCRF)
+max_MoveRF <- max(data_rms_envMOVERF)
+
+normalized_dataMoveBF <- data_rms_envMOVEBF/max_MVCBF
+normalized_dataMoveRF <- data_rms_envMOVERF/max_MoveRF
+
+
+# Plot the original and normalized signals (# graficado  las señales filtrada  y normalizada )
+
+
+par(mfrow=c(2,1))
+
+plot(time_rmsMOVE,data_rms_envMOVEBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG Movement Biceps Femoris Smoothed")
+
+plot(time_rmsMOVE,normalized_dataMoveBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG Movement Biceps Femoris Normalizada")
+
+plot(time_rmsMOVE,data_rms_envMOVERF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG Movement Rectus Femoris Smoothed")
+
+plot(time_rmsMOVE,normalized_dataMoveRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
+title("EMG Movement Rectus Femoris Normalizada")
+
+
+# 4. Spectral analysis ( Análisis espectral) 
+
+# Perform Fourier Transform (Ejecución de la transformada rapida de fourier)
+
+# Perform Fourier transform on filtered_data (Ejecución de la transformada rapida de fourieren la señal filtrada)
+
+fft_data <- abs(fft(filtereddata))
+
+# Calculate power spectrum ( Calculo del espectro de potencia)
+
+power_spectrum <- abd(fft_data)^2
+
+# Calculate the power spectrum using spec.pgram(Calculo del espectro de potencia usando sepc.gram)
+
+psd <- spec.pgram(filtereddata, taper = 0, log = "no", fast= FALSE, detrend = FALSE,
+                  xlab= "Fraquency (KHz)", ylab = "Spectrum (mV2/Hz)")
+
+# Plot the power spectrum ( Gráfico del espectro de potencia) 
+
+plot(psd$freq*1000, psd$spec, type = "l", xlab="Frequency (Hz)",
+     ylab= "Power (mV2/Hz)", main = "Espectro de potencia EMG")
+
+# Calculate frequency axis ( Cálculo de frecuencias) metricas
+
+sampling_rate <- 2160
+n <- length(fft_data)
+frequency <-seq(0,100, length.out = length(power_spectrum))
+
+# Calculate mean and median frequency ( Cálculo de la frecuencia media y la mediana)
+
+fft_data <- Re(fft_data)
+mean_frequency <- sum(frequency*fft_data[1:(n/2)]) / sum(fft_data[1:(n/2)])
+cumulative_sum <- cumsum(power_spectrum)
+median_frequency <- frequency[min(which(cumulative_sum >= sum(power_spectrum)/2))]
+
+# Calculate peak power and total power ( Cálculo del pico máximo y total de la potencia)
+
+peak_power <- max(fft_data[1:(n/2+1)])^2 / n
+total_power <- sum(fft_data[1:n/2+1])^2 /n
+
+# Print the results( Presentación de resultados )
+
+cat("Mean Frequency:", mean_frequency, "Hz\n")
+cat("Median Frequency:", median_frequency, "Hz\n")
+cat("Peak Power:", peak_power, "mV2/Hz\n")
+cat("Total Power:", total_power, "mV2/Hz\n")
 
 # Time syncronization between IMU and EMG ( Sincronizacion de datos IMU y EMG)
 # set a time constant to adjust the offset between IMU and EMG
