@@ -12,69 +12,83 @@ library(signal)
 library(tidyverse)
 library(gsignal)
 library(readxl)
+library(patchwork)
+library(magrittr)
 ```
 
 # EMG processing
 
 ## Setup plotting and load data
 ```{r}
-par(mfrow=c(3,1))
-
-data_EMGMVCBF <- read_excel("R_BFMVC.xlsx")  
-data_EMGMVCRF <- read_excel("R_RFMVC.xlsx") 
-data_MOVEMENT <- read_excel("EMG_MOVEMENT.xlsx")
-
-# Convert to numeric vector (Conversión de datos a una vectores numericos)
-
-emg_MVCBF<- as.numeric(data_EMGMVCBF$`R BICEPS FEMORIS: EMG 2 [V]`)
-timeMVCBF <- as.numeric(data_EMGMVCBF$`X [s]`)
-
-emg_MVCRF<- as.numeric(data_EMGMVCRF$`R RECTUS FEMORIS: EMG 1 [V]`)
-timeMVCRF <- as.numeric(data_EMGMVCRF$`X [s]`)
-
-emg_MOVEMENTBF<- as.numeric(data_MOVEMENT$`R BICEPS FEMORIS: EMG 2 [V]`)
-emg_MOVEMENTRF<- as.numeric(data_MOVEMENT$`R RECTUS FEMORIS: EMG 1 [V]`)
-timeMOVEMENT <- as.numeric(data_MOVEMENT$`X [s]`)
+data_mvc_bf <- read_excel("R_BFMVC.xlsx") |>
+  rename(time = `X [s]`, signal = `R BICEPS FEMORIS: EMG 2 [V]`)
+data_mvc_rf <- read_excel("R_RFMVC.xlsx") |>
+  rename(time = `X [s]`, signal = `R RECTUS FEMORIS: EMG 1 [V]`)
+data_mvt <- read_excel("EMG_MOVEMENT.xlsx") |>
+   rename(time = `X [s]`,
+          signal_rf = `R RECTUS FEMORIS: EMG 1 [V]`,
+          signal_bf = `R BICEPS FEMORIS: EMG 2 [V]`
+    )
+```
 
 
-# Plot raw (Gráfico señal bruta )
 
-plot(timeMVCBF,emg_MVCBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG MVC Biceps Femoris")
+## Raw EMG signals
+```{r}
+gg_mvc_bf <- ggplot(data_mvc_bf, aes(time, signal)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Amplitude (mV)", 
+       title = "EMG MVC Biceps Femoris") +
+  theme_light()
 
-plot(timeMVCRF,emg_MVCRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG MVC Rectus Femoris")
+gg_mvc_rf <- ggplot(data_mvc_rf, aes(time, signal)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Amplitude (mV)", 
+       title = "EMG MVC Rectus Femoris") +
+  theme_light()
 
-plot(timeMOVEMENT,emg_MOVEMENTBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG Movement Biceps Femoris")
+gg_mvt_bf <- ggplot(data_mvt, aes(time, signal_bf)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Amplitude (mV)", 
+       title = "EMG Movement Biceps Femoris") +
+  theme_light()
 
-plot(timeMOVEMENT,emg_MOVEMENTRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
-title("EMG Movement Rectus Femoris")
+gg_mvt_rf <- ggplot(data_mvt, aes(time, signal_rf)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Amplitude (mV)", 
+       title = "EMG Movement Rectus Femoris") +
+  theme_light()
 
-# 2. Filter EMG data (Filtrado datos EMG )
+gg_mvc_bf / gg_mvc_rf
+gg_mvt_bf / gg_mvt_bf
 
-# Set filter parameters (Definición de los parametros del filtro)
+```
 
+## Filter EMG data
+```{r}
 fs <- 2160
 lowcut <- 20
 highcut <- 450
 order <- 4
 
-
-# Design a butterworth filter ( Diseño del filtro butterworth)
-
+# Design a butterworth filter
 bf <- butter(order, c(lowcut, highcut)/(fs/2), type= "pass", plane ="z")
 
+# Apply the filter to the data
+data_mvc_rf <- data_mvc_rf |> mutate(signal_filtered = filtilt(bf, signal))
+data_mvc_bf <- data_mvc_bf |> mutate(signal_filtered = filtilt(bf, signal))
+data_mvt <- data_mvt |> mutate(signal_bf_filtered = filtilt(bf, signal_bf), 
+                               signal_rf_filtered = filtfilt(bf, signal_rf
+                                                            ))
+```
 
-# Apply the filter to the data (Implementación de flitro a los datos) 
+# Plot filtered signals
 
-filteredMVCBF <- filtfilt(bf, emg_MVCBF)
-filteredMVCRF <- filtfilt(bf, emg_MVCRF)
-filteredMoveBF <- filtfilt(bf, emg_MOVEMENTBF)
-filteredMoveRF <- filtfilt(bf, emg_MOVEMENTRF)
-
-# Signal plot  ( Graficado de la señal )
-
+```{r}
 plot(timeMVCBF,filteredMVCBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
 title("EMG MVC Biceps Femoris filtered")
 
@@ -86,6 +100,7 @@ title("EMG Movement Biceps Femoris filtered")
 
 plot(timeMOVEMENT,filteredMoveRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
 title("EMG Movement Rectus Femoris filtered")
+```
 
 # 3. Amplitude analysis ( Análisis de la amplitud) 
 
@@ -198,52 +213,4 @@ title("EMG Movement Rectus Femoris Smoothed")
 
 plot(time_rmsMOVE,normalized_dataMoveRF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
 title("EMG Movement Rectus Femoris Normalizada")
-
-
-# 4. Spectral analysis ( Análisis espectral) 
-
-# Perform Fourier Transform (Ejecución de la transformada rapida de fourier)
-
-# Perform Fourier transform on filtered_data (Ejecución de la transformada rapida de fourieren la señal filtrada)
-
-fft_data <- abs(fft(filtereddata))
-
-# Calculate power spectrum ( Calculo del espectro de potencia)
-
-power_spectrum <- abd(fft_data)^2
-
-# Calculate the power spectrum using spec.pgram(Calculo del espectro de potencia usando sepc.gram)
-
-psd <- spec.pgram(filtereddata, taper = 0, log = "no", fast= FALSE, detrend = FALSE,
-                  xlab= "Fraquency (KHz)", ylab = "Spectrum (mV2/Hz)")
-
-# Plot the power spectrum ( Gráfico del espectro de potencia) 
-
-plot(psd$freq*1000, psd$spec, type = "l", xlab="Frequency (Hz)",
-     ylab= "Power (mV2/Hz)", main = "Espectro de potencia EMG")
-
-# Calculate frequency axis ( Cálculo de frecuencias) metricas
-
-sampling_rate <- 2160
-n <- length(fft_data)
-frequency <-seq(0,100, length.out = length(power_spectrum))
-
-# Calculate mean and median frequency ( Cálculo de la frecuencia media y la mediana)
-
-fft_data <- Re(fft_data)
-mean_frequency <- sum(frequency*fft_data[1:(n/2)]) / sum(fft_data[1:(n/2)])
-cumulative_sum <- cumsum(power_spectrum)
-median_frequency <- frequency[min(which(cumulative_sum >= sum(power_spectrum)/2))]
-
-# Calculate peak power and total power ( Cálculo del pico máximo y total de la potencia)
-
-peak_power <- max(fft_data[1:(n/2+1)])^2 / n
-total_power <- sum(fft_data[1:n/2+1])^2 /n
-
-# Print the results( Presentación de resultados )
-
-cat("Mean Frequency:", mean_frequency, "Hz\n")
-cat("Median Frequency:", median_frequency, "Hz\n")
-cat("Peak Power:", peak_power, "mV2/Hz\n")
-cat("Total Power:", total_power, "mV2/Hz\n")
 ```
