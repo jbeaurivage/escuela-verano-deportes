@@ -5,7 +5,7 @@ date: "2023-07-14"
 ---
 
 # Setting up libraries
-```{r}
+```{r, message=FALSE, warning=FALSE}
 library(zoo)
 library(pracma)
 library(signal)
@@ -195,4 +195,284 @@ gg_mvt_rf_rms <- ggplot(data_mvt, aes(time, rf_normalized)) +
 
 gg_mvc_bf_rms / gg_mvc_rf_rms
 gg_mvt_bf_rms / gg_mvt_rf_rms
+```
+
+## Resample EMG data to 60 Hz
+```{r}
+original_frequency <- 2160  
+target_frequency <- 60  
+resampling_ratio <- original_frequency / target_frequency
+
+# Resample the normalized RMS signal vectors to the target frequency
+rf_resampled <- downsample(as.vector(data_mvt$rf_normalized), resampling_ratio)
+bf_resampled <- downsample(as.vector(data_mvt$bf_normalized), resampling_ratio)
+time_resampled <- downsample(as.vector(data_mvt$time), resampling_ratio)
+
+emg_data = tibble(rf = rf_resampled, bf = bf_resampled, time = time_resampled)
+```
+
+# IMU processing
+## Load and clean up data
+```{r}
+f_sampling = 60
+imu_tibia <- read.csv("IMU/PantoD_20230712_114610_587.csv", fileEncoding = "Latin1", sep = ",", header = TRUE, comment.char = "#")
+imu_femur <- read.csv("IMU/PiernaD_20230712_114610_592.csv", fileEncoding = "Latin1", sep = ",", header = TRUE, comment.char = "#")
+imu_tibia <- imu_tibia |> mutate(time = (PacketCounter - min(PacketCounter)) / f_sampling) |> na.omit()
+imu_femur <- imu_femur |> mutate(time = (PacketCounter - min(PacketCounter)) / f_sampling) |> na.omit()
+
+diff <- nrow(imu_femur) - nrow(imu_tibia)
+if(diff > 0){
+  imu_femur <- imu_femur |> slice(1 : (n() - diff))
+} else if(diff < 0) {
+  imu_tibia <- imu_tibia |> slice(1 : (n() - abs(diff)))  
+}
+```
+
+
+## Filter data
+```{r}
+
+# Define the filter parameters
+# Sampling frequency
+fs <- 60
+# Cutoff freq.
+fc <- 5 
+# Filter order
+order <- 4
+
+# Design the buttherworth filter
+f_b <- butter(order, fc / (fs/2), type="low")
+
+# Apply the filter 
+imu_femur <- imu_femur |> mutate(across(Acc_X:Mag_Z, ~ filtfilt(f_b, .x)))
+imu_tibia <- imu_tibia |> mutate(across(Acc_X:Mag_Z, ~ filtfilt(f_b, .x)))
+```
+
+
+
+# Calculating IMU angle from accelerometer, gyroscope, and magnetometer data
+```{r}
+# Initialize orientation estimate
+imu_femur <- imu_femur |> mutate(
+  roll = 0,
+  pitch = 0,
+  yaw = 0,
+  acc_roll = 0,
+  acc_pitch = 0
+)
+imu_tibia <- imu_tibia |> mutate(
+  roll = 0,
+  pitch = 0,
+  yaw = 0,
+  acc_roll = 0,
+  acc_pitch = 0
+)
+
+# Initialize complementary filter constants
+tibia_filter = tibble(alpha = 0.98, beta = 1 - 0.98)
+femur_filter = tibble(alpha = 0.98, beta = 1 - 0.98)
+
+# Loop over sensor readings
+estimate_angles <- function(imu, filter_consts) {
+  for (i in 1:(nrow(imu) - 1)) {
+    # Estimate orientation using complementary filter
+    imu$acc_roll[i] <-
+      atan2(imu$Acc_Y[i], imu$Acc_Z[i]) * 180 / pi
+    imu$acc_pitch[i] <-
+      atan2(-imu$Acc_X[i],
+            sqrt(imu$Acc_Y[i] ^ 2 + imu$Acc_Z[i] ^ 2)) * 180 / pi
+    
+    imu$roll[i + 1] <-
+      filter_consts$alpha * (imu$roll[i] + imu$Gyr_X[i] * 1 / fs) + filter_consts$beta * imu$acc_roll[i]
+    imu$pitch[i + 1] <-
+      filter_consts$alpha * (imu$pitch[i] + imu$Gyr_Y[i] * 1 /
+                              fs) + filter_consts$beta * imu$acc_roll[i]
+    imu$yaw[i + 1] <-
+      imu$yaw[i] + imu$Gyr_Z[i] * 1 / fs
+  }
+  
+  imu
+}
+
+imu_tibia <- estimate_angles(imu_tibia, tibia_filter)
+imu_femur <- estimate_angles(imu_femur, femur_filter)
+
+
+```
+
+## Graph angle estimates
+```{r}
+gg_femur_roll <- ggplot(imu_femur, aes(time, roll)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Angle (deg)", 
+       title = "Femur roll") +
+  theme_light()
+
+gg_femur_pitch <- ggplot(imu_femur, aes(time, pitch)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Angle (deg)", 
+       title = "Femur pitch") +
+  theme_light()
+
+gg_femur_yaw <- ggplot(imu_femur, aes(time, yaw)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Angle (deg)", 
+       title = "Femur yaw") +
+  theme_light()
+
+gg_tibia_roll <- ggplot(imu_tibia, aes(time, roll)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Angle (deg)", 
+       title = "Tibia roll") +
+  theme_light()
+
+gg_tibia_pitch <- ggplot(imu_tibia, aes(time, pitch)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Angle (deg)", 
+       title = "Tibia pitch") +
+  theme_light()
+
+gg_tibia_yaw <- ggplot(imu_tibia, aes(time, yaw)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Angle (deg)", 
+       title = "Tibia yaw") +
+  theme_light()
+
+gg_femur_roll / gg_femur_pitch / gg_femur_yaw
+gg_tibia_roll / gg_tibia_pitch / gg_tibia_yaw
+```
+
+
+## Convert angles to rotation matrix
+```{r}
+anglesToRotationMatrix <- function(roll, pitch, yaw) {
+  # Convert angles to radians
+  roll_rad <- roll * pi / 180
+  pitch_rad <- pitch * pi / 180
+  yaw_rad <- yaw * pi / 180
+  
+  # Calculate sin and cos values
+  sr <- sin(roll_rad)
+  cr <- cos(roll_rad)
+  sp <- sin(pitch_rad)
+  cp <- cos(pitch_rad)
+  sy <- sin(yaw_rad)
+  cy <- cos(yaw_rad)
+  
+  # Calculate rotation matrix
+  R <- matrix(0, nrow = 3, ncol = 3)
+  R[1, 1] <- cp * cy
+  R[1, 2] <- cp * sy
+  R[1, 3] <- -sp
+  R[2, 1] <- sr * sp * cy - cr * sy
+  R[2, 2] <- sr * sp * sy + cr * cy
+  R[2, 3] <- sr * cp
+  R[3, 1] <- cr * sp * cy + sr * sy
+  R[3, 2] <- cr * sp * sy - sr * cy
+  R[3, 3] <- cr * cp
+  
+  return(R)
+}
+
+
+# Function to calculate the angle between two sensors ( funcion para calcular el angulo entre dos vectores )
+calculateAngleBetweenSensors <- function(roll1, pitch1, yaw1, roll2, pitch2, yaw2) {
+  n <- length(roll1)  # Number of angles
+  
+  # Initialize result vectors
+  roll_relative <- numeric(n)
+  pitch_relative <- numeric(n)
+  yaw_relative <- numeric(n)
+  
+  for (i in 1:n) {
+    # Convert roll, pitch, and yaw angles to rotation matrices
+    R1 <- anglesToRotationMatrix(roll1[i], pitch1[i], yaw1[i])
+    R2 <- anglesToRotationMatrix(roll2[i], pitch2[i], yaw2[i])
+    
+    # Calculate the relative rotation matrix
+    R_relative <- solve(R2) %*% R1
+    
+    # Extract roll, pitch, and yaw angles from the relative rotation matrix
+    roll_relative[i] <- atan2(R_relative[2, 3], R_relative[3, 3])
+    pitch_relative[i] <- -asin(R_relative[1, 3])
+    yaw_relative[i] <- atan2(R_relative[1, 2], R_relative[1, 1])
+  }
+  
+  return(list(roll_relative = roll_relative, pitch_relative = pitch_relative, yaw_relative = yaw_relative))
+}
+
+
+# Call the function with the given input vectors # Call the function with the given input vectors (Llamar a la función con los vectores de entrada dados) 
+
+femur_roll <- as.matrix(imu_femur$roll)
+femur_pitch <- as.matrix(imu_femur$pitch)
+femur_yaw <- as.matrix(imu_femur$yaw)
+
+tibia_roll <- as.matrix(imu_tibia$roll)
+tibia_pitch <- as.matrix(imu_tibia$pitch)
+tibia_yaw <- as.matrix(imu_tibia$yaw)
+
+result <- calculateAngleBetweenSensors(femur_roll,
+                                       femur_pitch,
+                                       femur_yaw,
+                                       tibia_roll,
+                                       tibia_pitch,
+                                       tibia_yaw
+                                      )
+
+relative_angles = tibble(roll = result$roll_relative * 180/pi,
+                         pitch = result$pitch_relative * 180/pi,
+                         yaw = result$yaw_relative * 180/pi,
+                         time = imu_tibia$time
+                        )
+```
+
+## Filter relative angles
+```{r}
+
+# Define the filter parameter s
+# Sampling frequency
+fs <- 60
+# Cutoff frequency
+fc <- 20
+# Filter order
+order <- 4
+  
+# Design the buttherworth filter
+f_b <- butter(order, fc/(fs/2), type="low")
+
+# Apply the filter
+relative_angles <- relative_angles |> mutate(across(!time, ~ filtfilt(f_b, .x)))
+```
+
+# Plot the filtered relative angles
+```{r}
+gg_roll <- ggplot(relative_angles, aes(time, roll)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Angle (deg)", 
+       title = "Relative roll") +
+  theme_light()
+
+gg_pitch <- ggplot(relative_angles, aes(time, pitch)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Angle (deg)", 
+       title = "Relative pitch") +
+  theme_light()
+
+gg_yaw <- ggplot(relative_angles, aes(time, yaw)) +
+  geom_line(color = "blue") +
+  labs(x = "Time", 
+       y = "Angle (deg)", 
+       title = "Relative yaw") +
+  theme_light()
+
+gg_roll / gg_pitch / gg_yaw
 ```

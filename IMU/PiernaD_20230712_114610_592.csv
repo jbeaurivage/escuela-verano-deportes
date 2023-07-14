@@ -1,14 +1,14 @@
-sep=,
-DeviceTag:,PiernaD
-FirmwareVersion:,2.2.1
-AppVersion:,2022.0.0
-SyncStatus:,Synced
-OutputRate:,60Hz
-FilterProfile:,Dynamic
-Measurement Mode:,Inertial data Mode - Rate Quantities(with mag)
-StartTime: ,2023-07-12_11:46:10_592 GMT-5
-© Xsens Technologies B. V. 2005-2023
-
+#sep=,
+#DeviceTag:,PiernaD
+#FirmwareVersion:,2.2.1
+#AppVersion:,2022.0.0
+#SyncStatus:,Synced
+#OutputRate:,60Hz
+#FilterProfile:,Dynamic
+#Measurement Mode:,Inertial data Mode - Rate Quantities(with mag)
+#StartTime: ,2023-07-12_11:46:10_592 GMT-5
+#© Xsens Technologies B. V. 2005-2023
+#
 PacketCounter,SampleTimeFine,Acc_X,Acc_Y,Acc_Z,Gyr_X,Gyr_Y,Gyr_Z,Mag_X,Mag_Y,Mag_Z
 1,3131545898,9.286650,-2.633903,-0.378440,-3.371709,-3.567802,1.215820,-0.406494,-0.389648,0.995605
 2,3131562565,9.334672,-2.758012,-0.295822,0.704906,-2.876511,1.615041,-0.403809,-0.389648,0.990967

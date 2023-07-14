@@ -1,14 +1,14 @@
-sep=,
-DeviceTag:,PantoD
-FirmwareVersion:,2.2.1
-AppVersion:,2022.0.0
-SyncStatus:,Synced
-OutputRate:,60Hz
-FilterProfile:,Dynamic
-Measurement Mode:,Inertial data Mode - Rate Quantities(with mag)
-StartTime: ,2023-07-12_11:46:10_585 GMT-5
-© Xsens Technologies B. V. 2005-2023
-
+#sep=,
+#DeviceTag:,PantoD
+#FirmwareVersion:,2.2.1
+#AppVersion:,2022.0.0
+#SyncStatus:,Synced
+#OutputRate:,60Hz
+#FilterProfile:,Dynamic
+#Measurement Mode:,Inertial data Mode - Rate Quantities(with mag)
+#StartTime: ,2023-07-12_11:46:10_585 GMT-5
+#© Xsens Technologies B. V. 2005-2023
+#
 PacketCounter,SampleTimeFine,Acc_X,Acc_Y,Acc_Z,Gyr_X,Gyr_Y,Gyr_Z,Mag_X,Mag_Y,Mag_Z
 1,3131512564,9.679029,-0.758853,0.889717,1.173452,0.478132,-3.624300,-0.362793,-0.140625,0.965576
 2,3131529231,9.767966,-0.775597,0.840733,0.080315,0.436216,-2.927032,-0.364502,-0.137207,0.965576
