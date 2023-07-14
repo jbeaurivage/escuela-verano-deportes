@@ -79,15 +79,14 @@ order <- 4
 bf <- butter(order, c(lowcut, highcut)/(fs/2), type= "pass", plane ="z")
 
 # Apply the filter to the data
-data_mvc_rf <- data_mvc_rf |> mutate(signal_filtered = filtilt(bf, signal))
-data_mvc_bf <- data_mvc_bf |> mutate(signal_filtered = filtilt(bf, signal))
-data_mvt <- data_mvt |> mutate(signal_bf_filtered = filtilt(bf, signal_bf), 
+data_mvc_rf <- data_mvc_rf |> mutate(signal_filtered = filtfilt(bf, signal))
+data_mvc_bf <- data_mvc_bf |> mutate(signal_filtered = filtfilt(bf, signal))
+data_mvt <- data_mvt |> mutate(signal_bf_filtered = filtfilt(bf, signal_bf), 
                                signal_rf_filtered = filtfilt(bf, signal_rf
                                                             ))
 ```
 
-# Plot filtered signals
-
+## Plot filtered signals
 ```{r}
 plot(timeMVCBF,filteredMVCBF, type= "l", xlab="Tiempo(s)", ylab="Amplitud(mV)")
 title("EMG MVC Biceps Femoris filtered")
