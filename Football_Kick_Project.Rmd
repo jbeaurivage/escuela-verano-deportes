@@ -277,7 +277,7 @@ estimate_angles <- function(imu, filter_consts) {
   for (i in 1:(nrow(imu) - 1)) {
     # Estimate orientation using complementary filter
     imu$acc_roll[i] <-
-      atan2(imu$Acc_Y[i], imu$Acc_Z[i]) * 180 / pi
+      atan2(-imu$Acc_Y[i], imu$Acc_Z[i]) * 180 / pi
     imu$acc_pitch[i] <-
       atan2(-imu$Acc_X[i],
             sqrt(imu$Acc_Y[i] ^ 2 + imu$Acc_Z[i] ^ 2)) * 180 / pi
